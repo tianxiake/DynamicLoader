@@ -37,9 +37,10 @@ public class DynamicLoader implements IDynamicLoader {
      * 150 支持服务器推送运营差价,修复再升级bug
      * 160 加载新模块.支持回滚机制.加载后不再修改路径.
      * 170 支持A加载B独立协议
+     * 200 修改了新包名包名
      */
     //此版本号,在每次修改jar的代码的时候,需要更新并记录修改日志.每次涨10.
-    public static final int JAR_VERSION =170;
+    public static final int JAR_VERSION =200;
 
     //当前使用的dex路径
     private String operationPath;
