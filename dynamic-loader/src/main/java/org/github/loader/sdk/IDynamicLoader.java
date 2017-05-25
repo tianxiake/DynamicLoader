@@ -8,26 +8,22 @@ import org.github.loader.intf.IOperationPartner;
 /**
  * Created by yum on 16/9/20.
  */
-public interface IDynamicLoader {
+public interface IDynamicLoader<T> {
     /**
      * 加载运营
+     * @param  intfClass
      * @param operationCallback
      */
-    void loadDex(IOperationCallback operationCallback);
+    void loadDex(Class<T> intfClass,IOperationCallback operationCallback);
 
     /**
      * 加载运营
+     * @param intfClass
      * @param operationCallback
      * @param assetManager
+     * @param name
      */
-    void loadDex(IOperationCallback operationCallback, AssetManager assetManager);
-
-    /**
-     * 加载运营
-     * @param operationCallback
-     * @param assetManager
-     */
-    void loadDex(IOperationCallback operationCallback, AssetManager assetManager,String name);
+    void loadDex(Class<T> intfClass,IOperationCallback operationCallback, AssetManager assetManager,String name);
 
     /**
      * 通过zip包做离线跟新操作
@@ -39,5 +35,5 @@ public interface IDynamicLoader {
      * 获取运营
      * @return
      */
-    IOperationPartner getOperationPartner();
+    T getT();
 }

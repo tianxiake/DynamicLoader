@@ -26,7 +26,7 @@ public class TestActivityA extends Activity implements IOperationCallback,View.O
         super.onCreate(savedInstanceState);
         IDynamicLoader loadPyramidney= DynamicLoader.getInstance(getApplicationContext());
         loadPyramidney.loadDex(this);
-        this.operationPartner=loadPyramidney.getOperationPartner();
+        this.operationPartner=loadPyramidney.getT();
         button=new Button(this);
         button.setText("发送");
         button.setOnClickListener(this);
