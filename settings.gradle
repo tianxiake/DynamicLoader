@@ -1,0 +1,2 @@
+include ':dynamic-loader'
+include ':dynamic-loader-test'
