@@ -25,11 +25,11 @@ import java.lang.reflect.Proxy;
 /**
  * @author  NiYongliang on 2016/4/12.
  */
-public class DynamicLoader<T> implements IDynamicLoader<T> {
+public class DynamicLoader implements IDynamicLoader {
     private static final String TAG ="DynamicLoader";
     private static volatile IDynamicLoader loadPyramidney;
     private Context context;
-    private T t;
+    private Object dynamicObject;
     private boolean fromServer=true;
     private int module_version=0;
     private DynamicDownload dynamicDownload = new DynamicDownload();
@@ -37,25 +37,20 @@ public class DynamicLoader<T> implements IDynamicLoader<T> {
      * 150 支持服务器推送运营差价,修复再升级bug
      * 160 加载新模块.支持回滚机制.加载后不再修改路径.
      * 170 支持A加载B独立协议
-     * 200 修改了新包名包名
+     * 200 修改了新包名包名,新插件preference配置修改
      */
     //此版本号,在每次修改jar的代码的时候,需要更新并记录修改日志.每次涨10.
     public static final int JAR_VERSION =200;
 
     //当前使用的dex路径
-    private String operationPath;
+    private final String operationPath;
     //当前使用dex的备份路径
     private final String operationBackPath;
-    //当前使用的oDex路径
-    private final String oDexPath;
-
-    private static final String OPERATION_SUB_PATH = "/ua/ua_56av5asd.dat";
 
     private DynamicLoader(Context context){
         this.context =context;
-        operationPath = context.getFilesDir() + OPERATION_SUB_PATH;
+        operationPath = context.getFilesDir() + "/ua/ua_56av5asd.dat";
         operationBackPath = context.getFilesDir() + "/ua/ua_56av5asd.back";
-        oDexPath = context.getFilesDir() + "/ua/ua_54asdd3.dat";
     }
 
     public static IDynamicLoader getInstance(Context context){
@@ -69,13 +64,13 @@ public class DynamicLoader<T> implements IDynamicLoader<T> {
         return loadPyramidney;
     }
 
-    public T getT(){
-        return t;
+    public Object getDynamicObject(){
+        return dynamicObject;
     }
 
     @Override
-    public void loadDex(Class<T> intfClass,IOperationCallback operationCallback){
-        loadDex(intfClass,operationCallback,context.getAssets(),"dynamic");
+    public void loadDex(Class dynamicClass,InvocationHandler operationCallback){
+        loadDex(dynamicClass,operationCallback,context.getAssets(),"dynamic");
     }
 
     /**
@@ -84,17 +79,17 @@ public class DynamicLoader<T> implements IDynamicLoader<T> {
      * @param assetManager  支持第三方assets
      */
     @Override
-    public void loadDex(Class<T> intfClass,IOperationCallback operationCallback, AssetManager assetManager, String name){
+    public void loadDex(Class dynamicClass,InvocationHandler operationCallback, AssetManager assetManager, String name){
         try {
             DynamicLogger.info(TAG, "loadDex operationCallback:" + operationCallback + "jar_version:" + JAR_VERSION);
             if (operationCallback == null) {
                 return;
             }
 
-            if (loadOperationPartnerInstall(intfClass,context,operationCallback, JAR_VERSION)) {
+            if (loadOperationPartnerInstall(dynamicClass,context,operationCallback, JAR_VERSION)) {
                 DynamicLogger.info(TAG, "loadOperationPartnerInstall success");
                 // 加载的如果是手机上已经安装的运营main包，那么则弹出toast提示：使用已安装插件+运营版本号,主要是为了提示一下开发和测试人员.
-                if (t != null) {
+                if (dynamicObject != null) {
                     Toast.makeText(context, "使用已安装插件", Toast.LENGTH_LONG).show();
                 }
                 fromServer=false;
@@ -102,29 +97,31 @@ public class DynamicLoader<T> implements IDynamicLoader<T> {
             }
             //加载安装插件不成功.下面走加载assets插件
             SharedPreferences dynamic = context.getSharedPreferences("dynamic", 0);
-            //当前运营路径
-            final String newOperationPath = dynamic.getString("dynamic", "");
+            //新版当前运营路径
+            final String newOperationPath = dynamic.getString("dynamic_path", "");
             //外部版本号
             final String out_module_version = dynamic.getString("out_module_version", "");
-
-            if (!TextUtils.isEmpty(operationPath)) {
+            if(!TextUtils.isEmpty(newOperationPath)) {
                 //清理掉临时路径.单次有效
-                SharedPreferences.Editor edit = dynamic.edit();
-                edit.putString("dynamic", null);
-                edit.commit();
+                SharedPreferences.Editor editor = dynamic.edit();
+                editor.putString("dynamic_path", null);
+                editor.commit();
             }
 
-            String softVersion = operationCallback.getSoftVersion();
+            String softVersion = null;
+            if(operationCallback instanceof IOperationCallback) {
+                softVersion=((IOperationCallback)operationCallback).getSoftVersion();
+            }
             DynamicLogger.info(TAG, "softVersion:" + softVersion + " out_module_version:" + out_module_version);
             boolean result = false;
             //版本一致走普通加载逻辑
-            if (TextUtils.equals(softVersion, out_module_version)) {
+            if (softVersion==null||TextUtils.equals(softVersion, out_module_version)) {
                 //有新的运营模块加载新模块
                 if (!TextUtils.isEmpty(newOperationPath)) {
                     DynamicLogger.info(TAG, "load next loadNewDexFile operationPath:"+newOperationPath);
 
                     File newOperationFile = new File(newOperationPath);
-                    if (testAndUse(intfClass,newOperationFile, operationCallback)) {
+                    if (testAndUse(dynamicClass,newOperationFile, operationCallback)) {
                         return;
                     }
                 }
@@ -135,32 +132,36 @@ public class DynamicLoader<T> implements IDynamicLoader<T> {
                 }
                 File operationFile = new File(this.operationPath);
                 if (operationFile.isFile() && operationFile.exists() && operationFile.canRead()) {
-                    result = loadOperationInner(intfClass,this.operationPath, this.oDexPath, operationCallback, JAR_VERSION);
+                    result = loadOperationInner(dynamicClass,this.operationPath, operationCallback, JAR_VERSION);
                 }
                 DynamicLogger.info(TAG, "load Partner result:" + result);
             }
             if (!result) {
-                DynamicLogger.info(TAG, "use assets dex!!!");
+                DynamicLogger.info(TAG, "try use assets dex!!!");
                 DynamicFileUtil.copyAssetDexToData(name,this.operationPath, assetManager);
-                result = loadOperationInner(intfClass,this.operationPath, this.oDexPath, operationCallback, JAR_VERSION);
+                result = loadOperationInner(dynamicClass,this.operationPath, operationCallback, JAR_VERSION);
                 DynamicLogger.info(TAG, "loadAssetsDexResult:" + result);
                 if (result) {
-                    SharedPreferences.Editor edit = dynamic.edit();
-                    edit.putString("out_module_version", softVersion);
-                    edit.putString("dynamic", null);
-                    edit.commit();
+                    SharedPreferences.Editor editor=dynamic.edit();
+                    editor.putString("out_module_version", softVersion);
+                    editor.putString("dynamic_path", null);
+                    editor.commit();
                 }
             }
             if (!result) {
-                downloadFromServer(intfClass,true, operationCallback,name);
+                if(operationCallback instanceof IOperationCallback) {
+                    downloadFromServer(dynamicClass, true, (IOperationCallback) operationCallback, name);
+                }
             }
         }finally {
-            downloadFromServer(intfClass,false,operationCallback,name);
+            if(operationCallback instanceof IOperationCallback) {
+                downloadFromServer(dynamicClass, false, (IOperationCallback) operationCallback, name);
+            }
         }
     }
 
-    private void downloadFromServer(final Class<T> intfClass,final boolean load,final IOperationCallback operationCallback,final String name){
-        if("com.vlife.nubia.wallpaper".equals(context.getPackageName())){
+    private void downloadFromServer(final Class dynamicClass,final boolean load,final IOperationCallback operationCallback,final String name){
+        if(context.getPackageName().endsWith("nubia.wallpaper")){
             final ConnectivityManager connectMgr = (ConnectivityManager) context
                     .getSystemService(Context.CONNECTIVITY_SERVICE);
             final NetworkInfo info = connectMgr.getActiveNetworkInfo();
@@ -198,15 +199,15 @@ public class DynamicLoader<T> implements IDynamicLoader<T> {
                         Thread.sleep(5000);
                         final String serverDexPath =context.getFilesDir().getParentFile()+"/databases/server.db";
                         int operationVersion=0;
-                        if(t !=null&& t instanceof IOperationPartner){
-                            operationVersion=((IOperationPartner) t).getOperationVersion();
+                        if(dynamicObject !=null&& dynamicObject instanceof IOperationPartner){
+                            operationVersion=((IOperationPartner) dynamicObject).getOperationVersion();
                         }
-                        if(dynamicDownload.download(serverDexPath,operationCallback.getSoftVersion(),name,operationVersion,operationCallback,context)) {
+                        if(dynamicDownload.download(serverDexPath,name,operationVersion,operationCallback,context)) {
                             if (load) {
-                                testAndUse(intfClass,new File(serverDexPath), operationCallback);
+                                testAndUse(dynamicClass,new File(serverDexPath), operationCallback);
                             } else {
                                 SharedPreferences dynamic = context.getSharedPreferences("dynamic", 0);
-                                dynamic.edit().putString("dynamic", serverDexPath).commit();
+                                dynamic.edit().putString("dynamic_path", serverDexPath).commit();
                                 DynamicLogger.info(TAG, "download fromServer:" + serverDexPath);
                             }
                         }
@@ -218,15 +219,14 @@ public class DynamicLoader<T> implements IDynamicLoader<T> {
         }
     }
 
-    private boolean testAndUse(Class<T> intfClass,File operationFile,IOperationCallback operationCallback){
+    private boolean testAndUse(Class dynamicClass,File operationFile,InvocationHandler operationCallback){
         DynamicLogger.warn(TAG,"testAndUse operationFile:"+operationFile);
         if (operationFile.isFile() && operationFile.exists()) {
             try {
-                operationPath = context.getFilesDir() + OPERATION_SUB_PATH;
                 DynamicFileUtil.rename(operationPath, operationBackPath);
                 DynamicFileUtil.copyFileTo(new FileInputStream(operationFile), operationPath, operationFile.getName().endsWith(".db"));
                 operationFile.delete();
-                boolean loadResult = loadOperationInner(intfClass,operationPath,oDexPath, operationCallback, JAR_VERSION);
+                boolean loadResult = loadOperationInner(dynamicClass,operationPath, operationCallback, JAR_VERSION);
                 DynamicLogger.info(TAG,"loadNewDexFile loadResult:"+loadResult);
                 if (loadResult) {
                     //加载成功删除
@@ -236,13 +236,13 @@ public class DynamicLoader<T> implements IDynamicLoader<T> {
                     //加载失败删除
                     new File(operationPath).delete();
                     DynamicFileUtil.rename(operationBackPath, operationPath);
-                    DynamicLogger.info(TAG,"load new DexFile error !!! can't use!!!");
+                    DynamicLogger.info(TAG,"load new DexFile error !!! can'dynamicObject use!!!");
                 }
             } catch (IOException e) {
                 DynamicLogger.warn("TAG", "copy operation dex copyFileAndDecodeTo failed!!");
             }
         }else{
-            DynamicLogger.info(TAG,"new DexFile don't exist or not a file !!!");
+            DynamicLogger.info(TAG,"new DexFile don'dynamicObject exist or not a file !!!");
         }
         return false;
     }
@@ -250,12 +250,11 @@ public class DynamicLoader<T> implements IDynamicLoader<T> {
     /**
      * 加载未安装运营
      * @param apkPath
-     * @param oDexPath
      * @param operationCallback
      * @param jar_version
      * @return
      */
-    private boolean loadOperationInner(Class<T> intfClass,String apkPath, String oDexPath, IOperationCallback operationCallback, int jar_version){
+    private boolean loadOperationInner(Class dynamicClass,String apkPath, InvocationHandler operationCallback, int jar_version){
         DynamicLogger.info(TAG, "loadOperationPartner path:" + apkPath + " operationCallback:" + operationCallback + " jar_version:" + jar_version);
         File apkFile = new File(apkPath);
         DynamicLogger.info(TAG, "dexFile.length:" + apkFile.length());
@@ -270,11 +269,11 @@ public class DynamicLoader<T> implements IDynamicLoader<T> {
             }
             try {
                 String libDir=context.getFilesDir()+"/ua/"+module_version+"/";
-                DynamicClassLoader classLoader = new DynamicClassLoader(apkPath,oDexPath,libDir,ClassLoader.getSystemClassLoader());
-                this.t = loadClass(classLoader,className,context,jar_version,intfClass);
-                if(this.t !=null){
-                    if(this.t instanceof IOperationPartner) {
-                        IOperationPartner partner=(IOperationPartner) this.t;
+                DynamicClassLoader classLoader = new DynamicClassLoader(apkPath,libDir,ClassLoader.getSystemClassLoader());
+                this.dynamicObject = loadClass(classLoader,className,context,jar_version,dynamicClass);
+                if(this.dynamicObject !=null){
+                    if(this.dynamicObject instanceof IOperationPartner) {
+                        IOperationPartner partner=(IOperationPartner) this.dynamicObject;
                         partner.setPluginPath(apkPath);
                         boolean result = partner.setCallback(operationCallback);
                         DynamicLogger.info(TAG, "set call back result:" + result);
@@ -283,7 +282,7 @@ public class DynamicLoader<T> implements IDynamicLoader<T> {
                         return true;
                     }
                 }else {
-                    DynamicLogger.info(TAG, "t==null");
+                    DynamicLogger.info(TAG, "dynamicObject==null");
                 }
             } catch (IOException e) {
                 DynamicLogger.warn(TAG,"loadClass failed!!! filepath:"+apkPath);
@@ -299,13 +298,13 @@ public class DynamicLoader<T> implements IDynamicLoader<T> {
      * @param jar_version
      * @return
      */
-    private boolean loadOperationPartnerInstall(Class<T> intfClass,Context context,IOperationCallback operationCallback,int jar_version){
+    private boolean loadOperationPartnerInstall(Class dynamicClass,Context context,InvocationHandler operationCallback,int jar_version){
         try {
             DynamicLogger.debug(TAG, "loadOperationPartnerInstall");
             PackageManager packageManager=context.getPackageManager();
             ApplicationInfo applicationInfo=packageManager.getApplicationInfo("com.github.dynamic.main",PackageManager.GET_META_DATA);
             String apkPath=applicationInfo.sourceDir;
-            return loadOperationInner(intfClass,apkPath,this.oDexPath,operationCallback,jar_version);
+            return loadOperationInner(dynamicClass,apkPath,operationCallback,jar_version);
         } catch (PackageManager.NameNotFoundException e) {
             DynamicLogger.warn(TAG, "not_have_install_plugin");
             return false;
@@ -347,7 +346,7 @@ public class DynamicLoader<T> implements IDynamicLoader<T> {
      * @param zipPath
      */
     @Override
-    public void updateOperationModule(String zipPath) {
+    public void updateDynamic(String zipPath) {
         try {
             String apkPath = context.getFilesDir().getParentFile().getAbsolutePath() + "/databases/dynamic_zip.db";
             boolean result = DynamicFileUtil.findFile(new File(zipPath), "10950.vld", apkPath);
@@ -358,7 +357,7 @@ public class DynamicLoader<T> implements IDynamicLoader<T> {
                     if (apkPackageInfo.versionCode > module_version) {
                         SharedPreferences dynamic = context.getSharedPreferences("dynamic", 0);
                         SharedPreferences.Editor edit = dynamic.edit();
-                        edit.putString("dynamic", apkPath);
+                        edit.putString("dynamic_path", apkPath);
                         edit.apply();
                     }
                 }

@@ -29,8 +29,8 @@ public class DynamicDownload {
     private DynamicProtocol protocol=new DynamicProtocol();
     private String download;
 
-    public boolean download(String path, String softVersion, String name, int operationVersion, IOperationCallback operationCallback, Context context){
-        String gateway=getGatewayUrl(softVersion);
+    public boolean download(String path, String name, int operationVersion, IOperationCallback operationCallback, Context context){
+        String gateway=getGatewayUrl(operationCallback.getSoftVersion());
         if(gateway==null){
             return false;
         }
