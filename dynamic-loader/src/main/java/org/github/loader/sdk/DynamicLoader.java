@@ -126,10 +126,12 @@ public class DynamicLoader implements IDynamicLoader {
                     }
                 }
 
+                //优先回滚备份模块
                 File operationBackFile=new File(this.operationBackPath);
                 if(operationBackFile.isFile()&&operationBackFile.exists()&&operationBackFile.canRead()){
                     DynamicFileUtil.rename(this.operationBackPath,this.operationPath);
                 }
+                //加载老模块
                 File operationFile = new File(this.operationPath);
                 if (operationFile.isFile() && operationFile.exists() && operationFile.canRead()) {
                     result = loadOperationInner(dynamicClass,this.operationPath, operationCallback, JAR_VERSION);
