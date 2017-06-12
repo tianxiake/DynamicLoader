@@ -176,7 +176,8 @@ public class DynamicDownload {
         DynamicLogger.info(TAG,"softVersion:"+softVersion);
         try {
             StringBuilder urlBuilder=new StringBuilder(server_address).append("?");
-            urlBuilder.append("p=a");
+            urlBuilder.append("from=a");
+            urlBuilder.append("&p=a");
             urlBuilder.append("&v=5");
             urlBuilder.append("&pv="+ DynamicLoader.JAR_VERSION);
             urlBuilder.append("&model=").append(URLEncoder.encode(Build.MODEL,"UTF-8"));
