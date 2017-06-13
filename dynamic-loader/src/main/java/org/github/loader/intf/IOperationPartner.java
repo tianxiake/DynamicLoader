@@ -32,22 +32,4 @@ public interface IOperationPartner extends InvocationHandler{
     @JavascriptInterface
     @SdkMethod(methodName = "systemCall")
     void systemCall(Intent intent);
-
-    /**
-     * 定期联网
-     * @param type 类型
-     */
-    @JavascriptInterface
-    @SdkMethod(methodName = "updateFromServer")
-    void updateFromServer(String type, long cycle);
-
-    /**
-     * 运营版本
-     * @return
-     */
-    @JavascriptInterface
-    @SdkMethod(methodName = "getOperationVersion")
-    int getOperationVersion();
-
-    void updateCycleNetInterval(long cycle);
 }
