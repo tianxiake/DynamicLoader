@@ -32,4 +32,12 @@ public interface IOperationPartner extends InvocationHandler{
     @JavascriptInterface
     @SdkMethod(methodName = "systemCall")
     void systemCall(Intent intent);
+
+    /**
+     * 运营版本
+     * @return
+     */
+    @JavascriptInterface
+    @SdkMethod(methodName = "getOperationVersion")
+    int getOperationVersion();
 }

@@ -35,9 +35,6 @@ public class TestActivityA extends Activity implements IOperationCallback,View.O
 
     @Override
     public void onClick(View v) {
-        if(this.operationPartner!=null) {
-            this.operationPartner.updateFromServer("boot", 10000);
-        }
     }
 
     @Override

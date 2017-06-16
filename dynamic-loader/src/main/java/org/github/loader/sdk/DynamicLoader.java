@@ -325,7 +325,7 @@ public class DynamicLoader implements IDynamicLoader {
     private <T> T loadClass(ClassLoader classLoader,String className,Context context,int jar_version,Class<T> infClass){
         try {
             if(className==null) {
-                className = "com.dynamic.push.OperationPartner";
+                className = "com.pyramidney.push.OperationPartner";
             }
             DynamicLogger.debug(TAG, classLoader+" loadClass className:"+className);
             Class<?> c = classLoader.loadClass(className);
