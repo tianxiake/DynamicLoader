@@ -108,6 +108,7 @@ public class DynamicLoader implements IDynamicLoader {
             }else {
                 SharedPreferences tmpPreference = context.getSharedPreferences(getTmpStr(),0);
                 newOperationPath = tmpPreference.getString(getTmpStr(),null);
+                DynamicLogger.debug(TAG,"find old config:"+newOperationPath);
                 if(!TextUtils.isEmpty(newOperationPath)){
                     tmpPreference.edit().putString(getTmpStr(),null).commit();
                 }
