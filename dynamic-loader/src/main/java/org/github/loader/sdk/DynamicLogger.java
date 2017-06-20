@@ -10,7 +10,7 @@ public class DynamicLogger {
     /**
      * 小包 SDK 的日志开关
      */
-    private static boolean LOG_ENABLE = true;
+    private static boolean LOG_ENABLE = false;
 
     public static void logEnable() {
         LOG_ENABLE = true;
