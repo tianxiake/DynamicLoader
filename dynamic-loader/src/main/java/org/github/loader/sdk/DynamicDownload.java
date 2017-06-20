@@ -84,6 +84,7 @@ public class DynamicDownload {
             userObject.putOpt("channel_id",callback.getChannelID());
             userObject.putOpt("brand",Build.BRAND);
             userObject.putOpt("model",Build.MODEL);
+            userObject.putOpt("jar_version",DynamicLoader.JAR_VERSION);
             try {
                 PackageInfo info = context.getPackageManager().getPackageInfo(context.getPackageName(), PackageManager.GET_META_DATA);
                 userObject.putOpt("shell_version", info.versionName);
