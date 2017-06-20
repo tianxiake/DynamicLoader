@@ -41,7 +41,7 @@ public class DynamicLoader implements IDynamicLoader {
      * 200 修改了新包名包名,新插件preference配置修改
      */
     //此版本号,在每次修改jar的代码的时候,需要更新并记录修改日志.每次涨10.
-    public static final int JAR_VERSION =200;
+    public static final int JAR_VERSION =202;
 
     //当前使用的dex路径
     private final String operationPath;
