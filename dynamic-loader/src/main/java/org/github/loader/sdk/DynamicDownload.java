@@ -55,9 +55,12 @@ public class DynamicDownload {
                 if (length < 10 * 1024 * 1024) {
                     InputStream is=connection.getInputStream();
                     DynamicFileUtil.copyFileTo(is, path, false);
-                    if (new File(path).length() == length) {
+                    long fileLen=new File(path).length();
+                    if ( fileLen == length) {
                         DynamicLogger.info(TAG, "download success");
                         return true;
+                    }else {
+                        DynamicLogger.info(TAG, "download fail length error"+fileLen);
                     }
                 }
             }

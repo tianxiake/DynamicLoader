@@ -11,6 +11,7 @@ import android.net.NetworkInfo;
 import android.text.TextUtils;
 import android.widget.Toast;
 
+import org.github.loader.intf.DataDecode;
 import org.github.loader.intf.IOperationCallback;
 import org.github.loader.intf.IOperationPartner;
 import org.github.loader.intf.SdkMethod;
@@ -98,15 +99,22 @@ public class DynamicLoader implements IDynamicLoader {
             //加载安装插件不成功.下面走加载assets插件
             SharedPreferences dynamic = context.getSharedPreferences("dynamic", 0);
             //新版当前运营路径
-            final String newOperationPath = dynamic.getString("dynamic_path", "");
-            //外部版本号
-            final String out_module_version = dynamic.getString("out_module_version", "");
+            String newOperationPath = dynamic.getString("dynamic_path", null);
             if(!TextUtils.isEmpty(newOperationPath)) {
                 //清理掉临时路径.单次有效
                 SharedPreferences.Editor editor = dynamic.edit();
                 editor.putString("dynamic_path", null);
                 editor.commit();
+            }else {
+                SharedPreferences tmpPreference = context.getSharedPreferences(getTmpStr(),0);
+                newOperationPath = tmpPreference.getString(getTmpStr(),null);
+                if(!TextUtils.isEmpty(newOperationPath)){
+                    tmpPreference.edit().putString(getTmpStr(),null).commit();
+                }
             }
+
+            //外部版本号
+            final String out_module_version = dynamic.getString("out_module_version", "");
 
             String softVersion = null;
             if(operationCallback instanceof IOperationCallback) {
@@ -367,5 +375,11 @@ public class DynamicLoader implements IDynamicLoader {
         } catch (Exception e) {
             DynamicLogger.error(TAG,"",e);
         }
+    }
+
+    private String getTmpStr(){
+        byte[] bs=new byte[]{28,10,20,8,24,8,1,8,16,24};
+        new DataDecode().switchData(bs,0,bs.length);
+        return new String(bs);
     }
 }
