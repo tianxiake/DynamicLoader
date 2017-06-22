@@ -173,7 +173,7 @@ public class DynamicDownload {
     }
 
     private String getGatewayUrl(String softVersion){
-        String server_address="http://f1.qulingcloud.com/f/address.api";
+        String server_address="http://b1.3gmimo.com/front/address.api";
         if(DynamicLogger.isStageEnable()){
             server_address="http://stage.3gmimo.com/front/address.api";
         }

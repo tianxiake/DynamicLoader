@@ -42,9 +42,10 @@ public class DynamicLoader implements IDynamicLoader {
      * 202 兼容老版本
      * 203 下载B协议增加jar_version
      * 204 增加正式测试服务器切换接口
+     * 205 正式服务器地址更换(之前的地址是小包的地址)
      */
     //此版本号,在每次修改jar的代码的时候,需要更新并记录修改日志.每次涨10.
-    public static final int JAR_VERSION =204;
+    public static final int JAR_VERSION =205;
 
     //当前使用的dex路径
     private final String operationPath;
