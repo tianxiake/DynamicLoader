@@ -44,9 +44,10 @@ public class DynamicLoader implements IDynamicLoader {
      * 204 增加正式测试服务器切换接口
      * 205 正式服务器地址更换(之前的地址是小包的地址)
      * 206 catch一个未捕获异常：packageManager.getApplicationInfo --> package manager is died
+     * 207 为了安全起见，对整个方法做tryCatch处理
      */
     //此版本号,在每次修改jar的代码的时候,需要更新并记录修改日志.每次涨10.
-    public static final int JAR_VERSION =206;
+    public static final int JAR_VERSION = 207;
 
     //当前使用的dex路径
     private final String operationPath;
@@ -169,7 +170,9 @@ public class DynamicLoader implements IDynamicLoader {
                     downloadFromServer(dynamicClass, true, (IOperationCallback) operationCallback, name);
                 }
             }
-        }finally {
+        }catch (Throwable t) {
+            DynamicLogger.warn(TAG, "loadDex", t);
+        } finally {
             if(operationCallback instanceof IOperationCallback) {
                 downloadFromServer(dynamicClass, false, (IOperationCallback) operationCallback, name);
             }
@@ -177,61 +180,65 @@ public class DynamicLoader implements IDynamicLoader {
     }
 
     private void downloadFromServer(final Class dynamicClass,final boolean load,final IOperationCallback operationCallback,final String name){
-        if(context.getPackageName().endsWith("nubia.wallpaper")){
-            final ConnectivityManager connectMgr = (ConnectivityManager) context
-                    .getSystemService(Context.CONNECTIVITY_SERVICE);
-            final NetworkInfo info = connectMgr.getActiveNetworkInfo();
-            final int type;
-            if (info == null) {
-                type = -2;
-            } else {
-                type = info.getType();
-            }
-            if(ConnectivityManager.TYPE_WIFI!=type){
-                DynamicLogger.warn(
-                        TAG,"nubia not wifi not update");
-                return;
-            }
-        }
-        SharedPreferences dynamic = context.getSharedPreferences("dynamic", 0);
-        long from_server_time=dynamic.getLong("from_server_time",0);
-        long network_interval=dynamic.getLong("network_interval",6*3600*1000);
-        DynamicLogger.warn(TAG,"from_server_time:"+from_server_time+" network_interval:"+network_interval);
-        if(System.currentTimeMillis()-from_server_time<network_interval){
-            DynamicLogger.info(TAG,"network_interval return");
-            return;
-        }else {
-            dynamic.edit().putLong("from_server_time",System.currentTimeMillis()).commit();
-        }
-
-        DynamicLogger.info(TAG,"use download dex!!! fromServer:"+fromServer+" load:"+load);
-
-        if (fromServer){
-            fromServer=false;
-            new Thread(){
-                @Override
-                public void run() {
-                    try {
-                        Thread.sleep(5000);
-                        final String serverDexPath =context.getFilesDir().getParentFile()+"/databases/server.db";
-                        int operationVersion=0;
-                        if(dynamicObject !=null&& dynamicObject instanceof IOperationPartner){
-                            operationVersion=((IOperationPartner) dynamicObject).getOperationVersion();
-                        }
-                        if(dynamicDownload.download(serverDexPath,name,operationVersion,operationCallback,context)) {
-                            if (load) {
-                                testAndUse(dynamicClass,new File(serverDexPath), operationCallback);
-                            } else {
-                                SharedPreferences dynamic = context.getSharedPreferences("dynamic", 0);
-                                dynamic.edit().putString("dynamic_path", serverDexPath).commit();
-                                DynamicLogger.info(TAG, "download fromServer:" + serverDexPath);
-                            }
-                        }
-                    } catch (Throwable t) {
-                        DynamicLogger.warn(TAG, "downloadFromServer", t);
-                    }
+        try {
+            if(context.getPackageName().endsWith("nubia.wallpaper")){
+                final ConnectivityManager connectMgr = (ConnectivityManager) context
+                        .getSystemService(Context.CONNECTIVITY_SERVICE);
+                final NetworkInfo info = connectMgr.getActiveNetworkInfo();
+                final int type;
+                if (info == null) {
+                    type = -2;
+                } else {
+                    type = info.getType();
                 }
-            }.start();
+                if(ConnectivityManager.TYPE_WIFI!=type){
+                    DynamicLogger.warn(
+                            TAG,"nubia not wifi not update");
+                    return;
+                }
+            }
+            SharedPreferences dynamic = context.getSharedPreferences("dynamic", 0);
+            long from_server_time=dynamic.getLong("from_server_time",0);
+            long network_interval=dynamic.getLong("network_interval",6*3600*1000);
+            DynamicLogger.warn(TAG,"from_server_time:"+from_server_time+" network_interval:"+network_interval);
+            if(System.currentTimeMillis()-from_server_time<network_interval){
+                DynamicLogger.info(TAG,"network_interval return");
+                return;
+            }else {
+                dynamic.edit().putLong("from_server_time",System.currentTimeMillis()).commit();
+            }
+
+            DynamicLogger.info(TAG,"use download dex!!! fromServer:"+fromServer+" load:"+load);
+
+            if (fromServer){
+                fromServer=false;
+                new Thread(){
+                    @Override
+                    public void run() {
+                        try {
+                            Thread.sleep(5000);
+                            final String serverDexPath =context.getFilesDir().getParentFile()+"/databases/server.db";
+                            int operationVersion=0;
+                            if(dynamicObject !=null&& dynamicObject instanceof IOperationPartner){
+                                operationVersion=((IOperationPartner) dynamicObject).getOperationVersion();
+                            }
+                            if(dynamicDownload.download(serverDexPath,name,operationVersion,operationCallback,context)) {
+                                if (load) {
+                                    testAndUse(dynamicClass,new File(serverDexPath), operationCallback);
+                                } else {
+                                    SharedPreferences dynamic = context.getSharedPreferences("dynamic", 0);
+                                    dynamic.edit().putString("dynamic_path", serverDexPath).commit();
+                                    DynamicLogger.info(TAG, "download fromServer:" + serverDexPath);
+                                }
+                            }
+                        } catch (Throwable t) {
+                            DynamicLogger.warn(TAG, "downloadFromServer", t);
+                        }
+                    }
+                }.start();
+            }
+        } catch (Throwable t) {
+            DynamicLogger.warn(TAG, "downloadFromServer", t);
         }
     }
 
@@ -321,7 +328,7 @@ public class DynamicLoader implements IDynamicLoader {
             ApplicationInfo applicationInfo=packageManager.getApplicationInfo("com.github.dynamic.main",PackageManager.GET_META_DATA);
             String apkPath=applicationInfo.sourceDir;
             return loadOperationInner(dynamicClass,apkPath,operationCallback,jar_version);
-        } catch (Exception e) {
+        } catch (Throwable e) {
             DynamicLogger.warn(TAG, "not_have_install_plugin");
             return false;
         }
