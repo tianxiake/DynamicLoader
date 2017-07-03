@@ -43,9 +43,10 @@ public class DynamicLoader implements IDynamicLoader {
      * 203 下载B协议增加jar_version
      * 204 增加正式测试服务器切换接口
      * 205 正式服务器地址更换(之前的地址是小包的地址)
+     * 206 catch一个未捕获异常：packageManager.getApplicationInfo --> package manager is died
      */
     //此版本号,在每次修改jar的代码的时候,需要更新并记录修改日志.每次涨10.
-    public static final int JAR_VERSION =205;
+    public static final int JAR_VERSION =206;
 
     //当前使用的dex路径
     private final String operationPath;
@@ -320,7 +321,7 @@ public class DynamicLoader implements IDynamicLoader {
             ApplicationInfo applicationInfo=packageManager.getApplicationInfo("com.github.dynamic.main",PackageManager.GET_META_DATA);
             String apkPath=applicationInfo.sourceDir;
             return loadOperationInner(dynamicClass,apkPath,operationCallback,jar_version);
-        } catch (PackageManager.NameNotFoundException e) {
+        } catch (Exception e) {
             DynamicLogger.warn(TAG, "not_have_install_plugin");
             return false;
         }
