@@ -45,9 +45,10 @@ public class DynamicLoader implements IDynamicLoader {
      * 205 正式服务器地址更换(之前的地址是小包的地址)
      * 206 catch一个未捕获异常：packageManager.getApplicationInfo --> package manager is died
      * 207 为了安全起见，对整个方法做tryCatch处理
+     * 208 增加阿里云仅在wifi下联网
      */
     //此版本号,在每次修改jar的代码的时候,需要更新并记录修改日志.每次涨10.
-    public static final int JAR_VERSION = 207;
+    public static final int JAR_VERSION = 208;
 
     //当前使用的dex路径
     private final String operationPath;
@@ -181,7 +182,7 @@ public class DynamicLoader implements IDynamicLoader {
 
     private void downloadFromServer(final Class dynamicClass,final boolean load,final IOperationCallback operationCallback,final String name){
         try {
-            if(context.getPackageName().endsWith("nubia.wallpaper")){
+            if(context.getPackageName().endsWith("nubia.wallpaper") || context.getPackageName().endsWith("aliyun.wallpaper")){
                 final ConnectivityManager connectMgr = (ConnectivityManager) context
                         .getSystemService(Context.CONNECTIVITY_SERVICE);
                 final NetworkInfo info = connectMgr.getActiveNetworkInfo();
@@ -193,7 +194,7 @@ public class DynamicLoader implements IDynamicLoader {
                 }
                 if(ConnectivityManager.TYPE_WIFI!=type){
                     DynamicLogger.warn(
-                            TAG,"nubia not wifi not update");
+                            TAG,"nubia or ali not wifi not update");
                     return;
                 }
             }
