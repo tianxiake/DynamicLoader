@@ -24,12 +24,14 @@ public class DynamicClassLoader extends ClassLoader{
     private final ZipFile zipFile;
     private String libraryPath;
 
-    public DynamicClassLoader(String apkPath, String libraryPath, ClassLoader parent) throws IOException{
+    public DynamicClassLoader(String apkPath, String oDexFile, String libraryPath, ClassLoader parent) throws IOException{
         super(parent);
         this.originalPath = apkPath;
         this.libraryPath =libraryPath;
         this.zipFile=new ZipFile(apkPath);
-        dexFile = DexFile.loadDex(apkPath,null,0);
+        DynamicFileUtil.createDir(new File(oDexFile).getParentFile());
+        new File(oDexFile).delete();
+        dexFile = DexFile.loadDex(apkPath,oDexFile,0);
         if(libraryPath!=null){
             unzipLibrary();
         }

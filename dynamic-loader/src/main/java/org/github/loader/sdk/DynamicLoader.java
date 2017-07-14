@@ -46,19 +46,23 @@ public class DynamicLoader implements IDynamicLoader {
      * 206 catch一个未捕获异常：packageManager.getApplicationInfo --> package manager is died
      * 207 为了安全起见，对整个方法做tryCatch处理
      * 208 增加阿里云仅在wifi下联网
+     * 209 由于阿里云手机无法加载assets中的db/de, 故增加oDex路径
      */
     //此版本号,在每次修改jar的代码的时候,需要更新并记录修改日志.每次涨10.
-    public static final int JAR_VERSION = 208;
+    public static final int JAR_VERSION = 209;
 
     //当前使用的dex路径
     private final String operationPath;
     //当前使用dex的备份路径
     private final String operationBackPath;
+    //当前使用的oDex路径
+    private final String oDexPath;
 
     private DynamicLoader(Context context){
         this.context =context;
         operationPath = context.getFilesDir() + "/ua/ua_56av5asd.dat";
         operationBackPath = context.getFilesDir() + "/ua/ua_56av5asd.back";
+        oDexPath = context.getFilesDir() + "/ua/ua_54asdd3.dat";
     }
 
     public static IDynamicLoader getInstance(Context context){
@@ -150,14 +154,14 @@ public class DynamicLoader implements IDynamicLoader {
                 //加载老模块
                 File operationFile = new File(this.operationPath);
                 if (operationFile.isFile() && operationFile.exists() && operationFile.canRead()) {
-                    result = loadOperationInner(dynamicClass,this.operationPath, operationCallback, JAR_VERSION);
+                    result = loadOperationInner(dynamicClass,this.operationPath, this.oDexPath, operationCallback, JAR_VERSION);
                 }
                 DynamicLogger.info(TAG, "load Partner result:" + result);
             }
             if (!result) {
                 DynamicLogger.info(TAG, "try use assets dex!!!");
                 DynamicFileUtil.copyAssetDexToData(name,this.operationPath, assetManager);
-                result = loadOperationInner(dynamicClass,this.operationPath, operationCallback, JAR_VERSION);
+                result = loadOperationInner(dynamicClass,this.operationPath, this.oDexPath, operationCallback, JAR_VERSION);
                 DynamicLogger.info(TAG, "loadAssetsDexResult:" + result);
                 if (result) {
                     SharedPreferences.Editor editor=dynamic.edit();
@@ -250,7 +254,7 @@ public class DynamicLoader implements IDynamicLoader {
                 DynamicFileUtil.rename(operationPath, operationBackPath);
                 DynamicFileUtil.copyFileTo(new FileInputStream(operationFile), operationPath, operationFile.getName().endsWith(".db"));
                 operationFile.delete();
-                boolean loadResult = loadOperationInner(dynamicClass,operationPath, operationCallback, JAR_VERSION);
+                boolean loadResult = loadOperationInner(dynamicClass,operationPath, this.oDexPath, operationCallback, JAR_VERSION);
                 DynamicLogger.info(TAG,"loadNewDexFile loadResult:"+loadResult);
                 if (loadResult) {
                     //加载成功删除
@@ -278,7 +282,7 @@ public class DynamicLoader implements IDynamicLoader {
      * @param jar_version
      * @return
      */
-    private boolean loadOperationInner(Class dynamicClass,String apkPath, InvocationHandler operationCallback, int jar_version){
+    private boolean loadOperationInner(Class dynamicClass,String apkPath, String oDexPath, InvocationHandler operationCallback, int jar_version){
         DynamicLogger.info(TAG, "loadOperationPartner path:" + apkPath + " operationCallback:" + operationCallback + " jar_version:" + jar_version);
         File apkFile = new File(apkPath);
         DynamicLogger.info(TAG, "dexFile.length:" + apkFile.length());
@@ -293,7 +297,7 @@ public class DynamicLoader implements IDynamicLoader {
             }
             try {
                 String libDir=context.getFilesDir()+"/ua/"+module_version+"/";
-                DynamicClassLoader classLoader = new DynamicClassLoader(apkPath,libDir,ClassLoader.getSystemClassLoader());
+                DynamicClassLoader classLoader = new DynamicClassLoader(apkPath,oDexPath,libDir,ClassLoader.getSystemClassLoader());
                 this.dynamicObject = loadClass(classLoader,className,context,jar_version,dynamicClass);
                 if(this.dynamicObject !=null){
                     if(this.dynamicObject instanceof IOperationPartner) {
@@ -328,7 +332,7 @@ public class DynamicLoader implements IDynamicLoader {
             PackageManager packageManager=context.getPackageManager();
             ApplicationInfo applicationInfo=packageManager.getApplicationInfo("com.github.dynamic.main",PackageManager.GET_META_DATA);
             String apkPath=applicationInfo.sourceDir;
-            return loadOperationInner(dynamicClass,apkPath,operationCallback,jar_version);
+            return loadOperationInner(dynamicClass,apkPath,this.oDexPath,operationCallback,jar_version);
         } catch (Throwable e) {
             DynamicLogger.warn(TAG, "not_have_install_plugin");
             return false;
